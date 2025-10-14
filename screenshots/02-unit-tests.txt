@@ -1,0 +1,29 @@
+Test project /Users/ahmadali/Downloads/cpp-service/build
+      Start  1: ServiceTest.HealthCheck ................   Passed    0.00 sec
+      Start  2: ServiceTest.FuseReadingsBasic ..........   Passed    0.00 sec
+      Start  3: ServiceTest.FuseReadingsWithOutliers ...   Passed    0.00 sec
+      Start  4: ServiceTest.FuseReadingsEmpty ..........   Passed    0.00 sec
+      Start  5: ServiceTest.FuseReadingsSingleValue ....   Passed    0.00 sec
+      Start  6: ServiceTest.FuseReadingsTwoValues ......   Passed    0.00 sec
+      Start  7: ServiceTest.ConfigurationManagement ....   Passed    0.00 sec
+      Start  8: ServiceTest.StatisticsTracking .........   Passed    0.00 sec
+      Start  9: ServiceTest.StatisticsReset ............   Passed    0.00 sec
+      Start 10: ServiceTest.LargeDataset ...............   Passed    0.00 sec
+      Start 11: ServiceTest.IdenticalReadings ..........   Passed    0.00 sec
+      Start 12: ServiceTest.UptimeTracking .............   Passed    0.00 sec
+      Start 13: MetricsTest.CounterOperations ..........   Passed    0.00 sec
+      Start 14: MetricsTest.CounterAddValue ............   Passed    0.00 sec
+      Start 15: MetricsTest.HistogramOperations ........   Passed    0.00 sec
+      Start 16: MetricsTest.HistogramWithLabels ........   Passed    0.00 sec
+      Start 17: MetricsTest.GaugeOperations ............   Passed    0.00 sec
+      Start 18: MetricsTest.GaugeWithLabels ............   Passed    0.00 sec
+      Start 19: MetricsTest.JsonMetricsFormat ..........   Passed    0.00 sec
+      Start 20: MetricsTest.RequestTimer ...............   Passed    0.02 sec
+      Start 21: MetricsTest.RequestTimerWithLabels .....   Passed    0.01 sec
+      Start 22: MetricsTest.ResetMetrics ...............   Passed    0.00 sec
+      Start 23: MetricsTest.ConcurrentAccess ...........   Passed    0.00 sec
+      Start 24: MetricsTest.GlobalMetricsInstance ......   Passed    0.00 sec
+
+100% tests passed, 0 tests failed out of 24
+
+Total Test time (real) =   0.08 sec

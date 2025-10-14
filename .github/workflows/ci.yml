@@ -1,0 +1,222 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  BUILD_TYPE: Release
+  CC: clang
+  CXX: clang++
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          clang \
+          git \
+          lcov
+    
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_CXX_COMPILER=${{ env.CXX }} \
+          -DCMAKE_C_COMPILER=${{ env.CC }}
+    
+    - name: Build
+      run: cmake --build build --config ${{ env.BUILD_TYPE }}
+    
+    - name: Test
+      run: ctest --test-dir build --output-on-failure --verbose
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: build/Testing/
+  
+  sanitizers:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          clang \
+          git
+    
+    - name: Configure CMake with sanitizers
+      run: |
+        cmake -S . -B build-asan -G Ninja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_CXX_COMPILER=${{ env.CXX }} \
+          -DCMAKE_C_COMPILER=${{ env.CC }} \
+          -DENABLE_SANITIZERS=ON
+    
+    - name: Build with sanitizers
+      run: cmake --build build-asan --config RelWithDebInfo
+    
+    - name: Test with sanitizers
+      run: |
+        CTEST_OUTPUT_ON_FAILURE=1 ctest --test-dir build-asan
+      env:
+        ASAN_OPTIONS: "detect_leaks=1:abort_on_error=1"
+        UBSAN_OPTIONS: "abort_on_error=1"
+    
+    - name: Upload sanitizer results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: sanitizer-results
+        path: build-asan/Testing/
+  
+  coverage:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          clang \
+          git \
+          lcov \
+          gcovr
+    
+    - name: Configure CMake for coverage
+      run: |
+        cmake -S . -B build-cov -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_COMPILER=${{ env.CXX }} \
+          -DCMAKE_C_COMPILER=${{ env.CC }} \
+          -DENABLE_COVERAGE=ON
+    
+    - name: Build for coverage
+      run: cmake --build build-cov --config Debug
+    
+    - name: Test for coverage
+      run: ctest --test-dir build-cov --output-on-failure
+    
+    - name: Generate coverage report
+      run: |
+        cd build-cov
+        lcov --capture --directory . --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' --output-file coverage.info
+        lcov --remove coverage.info '*/third_party/*' --output-file coverage.info
+        lcov --list coverage.info
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: build-cov/coverage.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+  
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [build-and-test]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      run: |
+        docker build -t cpp-service:latest -f docker/Dockerfile .
+    
+    - name: Test Docker image
+      run: |
+        docker run -d --name test-container -p 8080:8080 cpp-service:latest
+        sleep 10
+        
+        # Test health endpoint
+        curl -f http://localhost:8080/health
+        
+        # Test fusion endpoint
+        curl -X POST http://localhost:8080/fuse \
+          -H 'Content-Type: application/json' \
+          -d '{"readings":[10.0, 11.0, 12.0]}'
+        
+        # Test metrics endpoint
+        curl -f http://localhost:8080/metrics
+        
+        docker stop test-container
+        docker rm test-container
+    
+    - name: Push to GitHub Container Registry (on tags)
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        docker tag cpp-service:latest ghcr.io/${{ github.repository }}:latest
+        docker tag cpp-service:latest ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+        docker push ghcr.io/${{ github.repository }}:latest
+        docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+  
+  clang-tidy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          clang \
+          clang-tidy \
+          git
+    
+    - name: Configure CMake
+      run: |
+        cmake -S . -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_CXX_COMPILER=${{ env.CXX }} \
+          -DCMAKE_C_COMPILER=${{ env.CC }} \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    
+    - name: Run clang-tidy
+      run: |
+        clang-tidy src/*.cpp include/*.hpp tests/*.cpp \
+          -p build \
+          --config-file=.clang-tidy \
+          --warnings-as-errors=* \
+          --quiet
+    
+    - name: Upload clang-tidy results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: clang-tidy-results
+        path: build/compile_commands.json
+

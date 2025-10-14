@@ -1,0 +1,107 @@
+🚀 Starting C++ Service Demo
+================================
+[INFO] Cleaning up any existing service...
+🏗️  Starting C++ Service...
+Starting C++ service on port 8080
+HTTP Server starting on port 8080
+Available endpoints:
+  GET  /health
+  POST /fuse
+  GET  /metrics
+  GET  /stats
+  GET  /config
+  POST /config
+
+Example requests:
+  curl http://localhost:8080/health
+  curl -X POST http://localhost:8080/fuse -H 'Content-Type: application/json' -d '{"readings":[12.1,11.9,12.0,12.2]}'
+  curl http://localhost:8080/metrics
+
+HTTP Server running on port 8080
+✅ Service started successfully (PID: 54667)
+📡 Testing HTTP Endpoints...
+
+[INFO] 1. Health Check:
+{
+  "status": "success",
+  "data": {
+    "status": "ok",
+    "version": "0.1.0"
+  }
+}
+
+[INFO] 2. Data Fusion (Normal Data):
+{
+  "status": "success",
+  "data": {
+    "fused_value": "12.050000",
+    "input_count": "4",
+    "timestamp": "1760463647772"
+  }
+}
+
+[INFO] 3. Data Fusion (With Outliers):
+{
+  "status": "success",
+  "data": {
+    "fused_value": "12.050000",
+    "input_count": "6",
+    "timestamp": "1760463647782"
+  }
+}
+
+[INFO] 4. Prometheus Metrics:
+# HELP requests_total Total count
+# TYPE requests_total counter
+requests_total{endpoint="/fuse"} 46
+requests_total{endpoint="/health"} 6
+requests_total{endpoint="/metrics"} 3
+requests_total{endpoint="/stats"} 6
+
+[INFO] 5. JSON Statistics:
+{
+  "status": "success",
+  "data": {
+    "average_fused_value": "12.006522",
+    "failed_requests": "0",
+    "successful_requests": "46",
+    "total_requests": "46",
+    "uptime_seconds": "434"
+  }
+}
+
+⚡ Load Testing Demo...
+[INFO] Running load test with hey (10 seconds, 50 concurrent users):
+
+Summary:
+  Total:	10.0808 secs
+  Slowest:	0.5752 secs
+  Fastest:	0.0002 secs
+  Average:	0.0022 secs
+  Requests/sec:	22549.8328
+  
+Response time histogram:
+  0.000 [1]	|
+  0.058 [226049]	|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.115 [928]	|
+  0.173 [256]	|
+
+Latency distribution:
+  10% in 0.0006 secs
+  25% in 0.0007 secs
+  50% in 0.0008 secs
+  75% in 0.0010 secs
+  90% in 0.0011 secs
+  95% in 0.0013 secs
+  99% in 0.0317 secs
+
+Status code distribution:
+  [200]	227320 responses
+
+🎯 Key Takeaways:
+• Production-ready C++17 microservice
+• Real-time metrics and monitoring
+• High-performance data fusion
+• Comprehensive error handling
+• Docker-ready containerization
+• Complete CI/CD pipeline

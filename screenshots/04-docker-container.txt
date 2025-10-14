@@ -1,0 +1,42 @@
+# Multi-stage Docker build for C++ service
+docker build -t cpp-service:latest -f docker/Dockerfile .
+
+[+] Building 45.2s (16/16) FINISHED
+ => [builder 6/6] RUN cmake --build build --config Release
+ => [runtime 6/6] RUN chown cppservice:cppservice /app/cpp-service
+
+# Check image size
+docker images cpp-service:latest
+REPOSITORY    TAG       IMAGE ID       CREATED        SIZE
+cpp-service   latest    d61557e1d13b   38 hours ago   126MB
+
+# Run container
+docker run --rm -p 8084:8080 cpp-service:latest
+
+Starting C++ service on port 8080
+HTTP Server starting on port 8080
+Available endpoints:
+  GET  /health
+  POST /fuse
+  GET  /metrics
+  GET  /stats
+  GET  /config
+  POST /config
+
+Example requests:
+  curl http://localhost:8080/health
+  curl -X POST http://localhost:8080/fuse -H 'Content-Type: application/json' -d '{"readings":[12.1,11.9,12.0,12.2]}'
+  curl http://localhost:8080/metrics
+
+HTTP Server running on port 8080
+Server listening on port 8080
+
+# Test container health
+curl http://localhost:8084/health
+{
+  "status": "success",
+  "data": {
+    "status": "ok",
+    "version": "0.1.0"
+  }
+}
