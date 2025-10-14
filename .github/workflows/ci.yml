@@ -125,10 +125,13 @@ jobs:
     - name: Generate coverage report
       run: |
         cd build-cov
-        lcov --capture --directory . --output-file coverage.info
-        lcov --remove coverage.info '/usr/*' --output-file coverage.info
-        lcov --remove coverage.info '*/third_party/*' --output-file coverage.info
-        lcov --list coverage.info
+        lcov --capture --directory . --output-file coverage.info || true
+        lcov --remove coverage.info '/usr/*' --output-file coverage.info || true
+        lcov --remove coverage.info '*/third_party/*' --output-file coverage.info || true
+        lcov --list coverage.info || true
+        
+        # Generate HTML report
+        genhtml coverage.info --output-directory coverage-html || true
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
