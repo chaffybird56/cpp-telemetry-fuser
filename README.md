@@ -1,9 +1,9 @@
 # 🚀 Production C++ Service
-
+<!--
 [![Build Status](https://github.com/yourusername/cpp-service/workflows/CI/badge.svg)](https://github.com/yourusername/cpp-service/actions)
 [![Test Coverage](https://codecov.io/gh/yourusername/cpp-service/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/cpp-service)
 [![Docker](https://img.shields.io/docker/image-size/cpp-service/latest)](https://hub.docker.com/r/yourusername/cpp-service)
-
+!-->
 > **A production-ready C++17 microservice demonstrating enterprise-grade patterns with comprehensive testing, monitoring, and deployment.**
 
 ## 🎯 **What This Is & Why It Matters**
