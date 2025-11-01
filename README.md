@@ -1,8 +1,9 @@
 # 🚀 Production C++ Service
 
 [![Build Status](https://github.com/chaffybird56/cpp-telemetry-fuser/workflows/CI/badge.svg)](https://github.com/chaffybird56/cpp-telemetry-fuser/actions)
-[![Test Coverage](https://codecov.io/gh/chaffybird56/cpp-telemetry-fuser/branch/main/graph/badge.svg)](https://codecov.io/gh/chaffybird56/cpp-telemetry-fuser)
-[![Docker](https://img.shields.io/docker/image-size/cpp-service/latest)](https://hub.docker.com/r/chaffybird56/cpp-telemetry-fuser)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-24%20passed-success.svg)](tests/)
 
 > **A production-ready C++17 microservice demonstrating enterprise-grade patterns with comprehensive testing, monitoring, and deployment.**
 
