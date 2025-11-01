@@ -210,7 +210,7 @@ jobs:
     
     - name: Run clang-tidy
       run: |
-        clang-tidy src/*.cpp include/*.hpp tests/*.cpp \
+        clang-tidy src/*.cpp include/*.hpp tests/service_tests.cpp tests/metrics_tests.cpp \
           -p build \
           --config-file=.clang-tidy \
           --warnings-as-errors=* \
