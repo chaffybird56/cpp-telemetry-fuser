@@ -1,219 +1,51 @@
-# 🚀 Production C++ Service
+# cpp-telemetry-fuser
 
-[![Build Status](https://github.com/chaffybird56/cpp-telemetry-fuser/workflows/CI/badge.svg)](https://github.com/chaffybird56/cpp-telemetry-fuser/actions)
+[![CI](https://github.com/chaffybird56/cpp-telemetry-fuser/workflows/CI/badge.svg)](https://github.com/chaffybird56/cpp-telemetry-fuser/actions/workflows/ci.yml)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://en.cppreference.com/w/cpp/17)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-24%20passed-success.svg)](tests/)
 
-> **A production-ready C++17 microservice demonstrating enterprise-grade patterns with comprehensive testing, monitoring, and deployment.**
+**Which sensor reading do you trust?** POST a batch of telemetry samples and get one fused value — with outlier rejection, Prometheus metrics, and a production-style HTTP surface.
 
-## 🎯 **What This Is & Why It Matters**
+> **Layers 1–4:** C++17 service core → threaded HTTP server → GitHub Actions CI (sanitizers, coverage) → Docker image + load-test gate.
 
-Imagine you have multiple sensors measuring the same thing (like temperature sensors in different rooms). Sometimes these sensors give you weird readings - maybe one is faulty or picking up interference. This C++ service is like a smart "data referee" that:
+<p align="center">
+  <img src="screenshots/05-prometheus-metrics.png" width="820" alt="Prometheus metrics endpoint — request counters, latency histograms, and fusion statistics">
+</p>
 
-🔍 **Takes readings from multiple sensors**  
-🧠 **Spots and filters out bad readings automatically**  
-📊 **Gives you one clean, reliable number**  
-⚡ **Handles thousands of requests per second**  
-📈 **Tracks everything with professional monitoring**  
+| Clean fusion | Outlier rejected |
+|---|---|
+| ![JSON stats after normal fuse](screenshots/06-json-stats.png) | `50.0` in `[12.1, 11.9, 12.0, 12.2, 50.0]` → filtered → fused **12.10** from the four in-band samples. |
+| Four agreeing sensors → stable fused value and `input_count` preserved in `/stats`. | Spike beyond **3σ** (configurable) dropped before median / weighted-average fusion. |
 
-Think of it like having a super-smart assistant that never sleeps, never makes mistakes, and can process sensor data faster than you can blink. It's built with the same technology that powers major websites and apps you use every day.
+## At a glance
 
-**Perfect for:** IoT devices, smart homes, industrial monitoring, data centers, or anywhere you need reliable, fast data processing.
+| | |
+|---|---|
+| **Problem** | Multiple sensors report the same quantity; one channel drifts, spikes, or fails. |
+| **Approach** | Z-score outlier gate → median (≥3 samples) or weighted average → single fused reading per request. |
+| **Why not “just average”?** | A single bad sample skews the mean; outlier detection keeps the fused value representative of the healthy cluster. |
+| **Stack** | C++17 · custom HTTP server · header-only JSON/logging · Prometheus metrics · GoogleTest · Docker multi-stage |
 
----
+## API surface
 
-## 🎬 **Live Demonstration**
+| Endpoint | Method | Role |
+|----------|--------|------|
+| `/health` | GET | Liveness + version |
+| `/fuse` | POST | Fuse `{"readings":[...]}` → fused value |
+| `/metrics` | GET | Prometheus text exposition |
+| `/stats` | GET | JSON request / fusion counters |
+| `/config` | GET/POST | Runtime outlier threshold & flags |
 
-### Interactive Demo
+**Example**
+
 ```bash
-./demo.sh
-```
-*Automated demo showing all service endpoints with real-time metrics*
-
-```
-🚀 Starting C++ Service Demo
-================================
-✅ Service started successfully (PID: 54667)
-📡 Testing HTTP Endpoints...
-
-[INFO] 1. Health Check:
-{
-  "status": "success",
-  "data": {
-    "status": "ok",
-    "version": "0.1.0"
-  }
-}
-
-[INFO] 2. Data Fusion (Normal Data):
-{
-  "status": "success",
-  "data": {
-    "fused_value": "12.050000",
-    "input_count": "4"
-  }
-}
-
-⚡ Load Testing Demo...
-Summary:
-  Requests/sec:	22549.8328
-  Latency P50:	0.0008 secs
-  Latency P99:	0.0317 secs
-  Status codes: [200]	227320 responses
-```
-
-### Unit Tests
-```bash
-ctest --test-dir build --output-on-failure
-```
-
-```
-Test project /Users/ahmadali/Downloads/cpp-service/build
-      Start  1: ServiceTest.HealthCheck ................   Passed    0.00 sec
-      Start  2: ServiceTest.FuseReadingsBasic ..........   Passed    0.00 sec
-      Start  3: ServiceTest.FuseReadingsWithOutliers ...   Passed    0.00 sec
-      ...
-      Start 24: MetricsTest.GlobalMetricsInstance ......   Passed    0.00 sec
-
-100% tests passed, 0 tests failed out of 24
-Total Test time (real) =   0.08 sec
-```
-
-### Performance Metrics
-```bash
-hey -z 15s -c 100 -m POST http://localhost:8081/fuse
-```
-
-```
-Summary:
-  Total:	20.9297 secs
-  Requests/sec:	13273.0273
-  
-Latency distribution:
-  10% in 0.0006 secs
-  25% in 0.0008 secs
-  50% in 0.0009 secs
-  75% in 0.0011 secs
-  90% in 0.0014 secs
-  95% in 0.0307 secs
-  99% in 0.0612 secs
-
-Status code distribution:
-  [200]	277689 responses
-```
-
-<details>
-<summary>🐳 Click to view Docker Container Details</summary>
-
-### Docker Container
-```bash
-docker build -t cpp-service:latest -f docker/Dockerfile .
-docker run --rm -p 8080:8080 cpp-service:latest
-```
-
-```
-[+] Building 45.2s (16/16) FINISHED
- => [runtime 6/6] RUN chown cppservice:cppservice /app/cpp-service
-
-docker images cpp-service:latest
-REPOSITORY    TAG       IMAGE ID       CREATED        SIZE
-cpp-service   latest    d61557e1d13b   38 hours ago   126MB
-
-Starting C++ service on port 8080
-HTTP Server running on port 8080
-Server listening on port 8080
-```
-
-</details>
-
-<details>
-<summary>📊 Click to view Prometheus Metrics</summary>
-
-### Prometheus Metrics
-![Prometheus Metrics](screenshots/05-prometheus-metrics.png)
-*Real-time Prometheus-compatible metrics for production monitoring*
-
-</details>
-
-<details>
-<summary>📈 Click to view JSON Statistics</summary>
-
-### JSON Statistics
-![JSON Statistics](screenshots/06-json-stats.png)
-*Comprehensive service statistics and health monitoring*
-
-</details>
-
-## 🎯 **What You Get**
-
-A complete **production C++ microservice** with:
-- **Real HTTP Server** with socket-based networking and threading
-- **Sensor Data Fusion** with intelligent outlier detection
-- **Thread-Safe Metrics** (Prometheus-compatible)
-- **Comprehensive Testing** (24 unit tests, 100% pass rate)
-- **Docker Containerization** (126MB ARM64 multi-stage build)
-- **CI/CD Pipeline** (GitHub Actions with sanitizers & coverage)
-
-## 🚀 **Quick Start**
-
-### **Interactive Demo**
-```bash
-git clone https://github.com/yourusername/cpp-service.git
-cd cpp-service
-./demo.sh  # Automated demo with all endpoints
-```
-
-### **Manual Setup**
-```bash
-# Build
-cmake -S . -B build -G Ninja && cmake --build build
-
-# Run
-./build/cpp-service --port 8080
-
-# Test
-curl http://localhost:8080/health
-curl -X POST http://localhost:8080/fuse \
+curl -s -X POST http://localhost:8080/fuse \
   -H 'Content-Type: application/json' \
   -d '{"readings":[12.1,11.9,12.0,12.2,50.0]}'
 ```
 
-### **Docker**
-```bash
-docker build -t cpp-service:latest -f docker/Dockerfile .
-docker run --rm -p 8080:8080 cpp-service:latest
-```
-
-## 📊 **Performance Highlights**
-
-| Metric | Value |
-|--------|-------|
-| **Throughput** | 22,549 req/s |
-| **Latency (P50)** | 0.8ms |
-| **Latency (P99)** | 31.7ms |
-| **Error Rate** | 0% |
-| **Memory Usage** | 15MB baseline |
-| **Binary Size** | 2.1MB |
-| **Container Size** | 126MB |
-
-## 🔌 **API Endpoints**
-
-| Endpoint | Method | Description | Example |
-|----------|--------|-------------|---------|
-| `/health` | GET | Service health check | `{"status": "ok", "version": "0.1.0"}` |
-| `/fuse` | POST | Sensor data fusion | `{"readings": [12.1, 11.9, 12.0]}` |
-| `/metrics` | GET | Prometheus metrics | `# HELP requests_total` |
-| `/stats` | GET | JSON statistics | `{"total_requests": 1234}` |
-| `/config` | GET/POST | Runtime configuration | `{"outlier_threshold": 3}` |
-
-### **Data Fusion Example**
-```bash
-curl -X POST http://localhost:8080/fuse \
-  -H 'Content-Type: application/json' \
-  -d '{"readings":[12.1,11.9,12.0,12.2,50.0]}'
-
-# Response (outlier 50.0 detected and filtered)
+```json
 {
   "status": "success",
   "data": {
@@ -224,166 +56,160 @@ curl -X POST http://localhost:8080/fuse \
 }
 ```
 
-## 🏗️ **Architecture**
+## How it works
 
-### **Core Components**
-- **`service.cpp`** - Business logic (sensor fusion algorithm)
-- **`metrics.cpp`** - Thread-safe metrics system
-- **`http_server.cpp`** - HTTP server with async I/O
-- **`main.cpp`** - Service entry point with signal handling
+```mermaid
+flowchart LR
+  A[POST /fuse JSON] --> B[Parse readings]
+  B --> C{Z-score outliers?}
+  C -->|yes| D[Drop beyond threshold]
+  C -->|no| E[Keep all]
+  D --> F{count ≥ 3?}
+  E --> F
+  F -->|yes| G[Median filter]
+  F -->|no| H[Weighted average]
+  G --> I[Fused value + metrics]
+  H --> I
+```
 
-### **Key Features**
-- **Thread-Safe**: Atomic operations for concurrent access
-- **Memory Efficient**: RAII resource management
-- **Observable**: Structured logging + Prometheus metrics
-- **Resilient**: Graceful shutdown + health checks
-- **Configurable**: Runtime configuration updates
+1. **Ingress** — HTTP worker threads accept JSON bodies on `/fuse`.  
+2. **Outlier gate** — samples farther than `outlier_threshold` standard deviations from the mean are removed (when enabled and `n > 2`).  
+3. **Fusion** — median for robustness at ≥3 points; weighted average for small sets.  
+4. **Observability** — counters, histograms, and `/stats` updated atomically; `/metrics` exposes Prometheus format.
 
-## 🧪 **Testing**
+## Quick start
+
+### Layer 1 — build & unit test
 
 ```bash
-# Run all tests
+git clone https://github.com/chaffybird56/cpp-telemetry-fuser.git
+cd cpp-telemetry-fuser
+cmake -S . -B build -G Ninja && cmake --build build
 ctest --test-dir build --output-on-failure
-
-# Result: 100% tests passed, 0 tests failed out of 24
 ```
 
-**Test Coverage:**
-- ✅ **Service Logic** (12 tests) - Data fusion, configuration, statistics
-- ✅ **Metrics System** (12 tests) - Counters, histograms, gauges, timers
-- ✅ **Integration Tests** - HTTP endpoints, JSON parsing
-- ✅ **Concurrency Tests** - Thread-safe operations
-
-## 🐳 **Containerization**
-
-### **Multi-Stage Docker Build**
-```dockerfile
-# Stage 1: Builder (Debian + Clang + CMake)
-FROM debian:bullseye-slim AS builder
-RUN apt-get install -y build-essential cmake ninja-build clang
-
-# Stage 2: Runtime (Debian Slim + Binary)
-FROM debian:bullseye-slim AS runtime
-COPY --from=builder /app/build/cpp-service /app/cpp-service
-```
-
-### **Container Specs**
-- **Base**: Debian Bullseye Slim
-- **Architecture**: ARM64 (Apple Silicon optimized)
-- **Size**: 126MB final image
-- **Security**: Non-root user, minimal attack surface
-- **Health Check**: Built-in Docker health check
-
-## 🚀 **CI/CD Pipeline**
-
-GitHub Actions workflow includes:
-- **Build & Test** (Release mode)
-- **Sanitizers** (ASan/UBSan)
-- **Code Coverage** (Codecov integration)
-- **Static Analysis** (Clang-tidy)
-- **Docker Build** (Multi-arch support)
-
-## 📈 **Load Testing**
+### Layer 2 — run locally
 
 ```bash
-# Install hey (load testing tool)
-brew install hey
+./build/cpp-service --port 8080
 
-# Run load test
-hey -z 30s -c 100 -m POST \
+curl http://localhost:8080/health
+curl -s -X POST http://localhost:8080/fuse \
+  -H 'Content-Type: application/json' \
+  -d '{"readings":[12.1,11.9,12.0,12.2]}'
+curl http://localhost:8080/metrics
+```
+
+### Layer 3 — interactive demo
+
+```bash
+./demo.sh
+```
+
+Exercises health, fuse (normal + outlier), metrics, stats, config, and a short `hey` load burst.
+
+### Layer 4 — container & load gate
+
+```bash
+docker build -t cpp-telemetry-fuser:latest -f docker/Dockerfile .
+docker run --rm -p 8080:8080 cpp-telemetry-fuser:latest
+
+# optional load test (hey)
+hey -z 15s -c 100 -m POST \
   -H "Content-Type: application/json" \
   -d '{"readings":[12.1,11.9,12.0]}' \
   http://localhost:8080/fuse
 ```
 
-**Results on Apple M3 Pro:**
-- **8,750 req/s** sustained throughput
-- **<2ms P50** latency
-- **0% error rate** under load
+## Runtime configuration
 
-## 🎯 **Use Cases**
+Tune fusion without recompiling:
 
-- **IoT Data Fusion** - Sensor data aggregation and filtering
-- **Real-time Analytics** - High-throughput data processing
-- **Microservices** - Backend service with metrics
-- **API Gateway** - Request routing and aggregation
-
-## 🛠️ **Tech Stack**
-
-- **Language**: C++17/20
-- **Build System**: CMake + Ninja
-- **Testing**: GoogleTest
-- **HTTP Server**: Custom header-only implementation
-- **JSON**: Header-only JSON library
-- **Logging**: Structured logging with request IDs
-- **Metrics**: Prometheus-compatible
-- **Container**: Docker multi-stage build
-- **CI/CD**: GitHub Actions
-
-## 📁 **Project Structure**
-
-```
-cpp-service/
-├── src/                    # Core implementation
-│   ├── main.cpp           # HTTP server entry point
-│   ├── service.cpp        # Business logic (data fusion)
-│   ├── metrics.cpp        # Thread-safe metrics system
-│   └── http_server.cpp    # HTTP server implementation
-├── include/               # Public headers
-├── tests/                 # Comprehensive test suite (24 tests)
-├── third_party/          # Header-only dependencies
-├── docker/               # Multi-stage Docker build
-├── .github/workflows/    # CI/CD pipeline
-├── tools/loadgen/        # Load testing tools
-├── demo.sh              # Interactive demo script
-└── TESTING_ANALYSIS.md  # Detailed testing documentation
+```bash
+curl http://localhost:8080/config
+curl -X POST http://localhost:8080/config \
+  -H 'Content-Type: application/json' \
+  -d '{"outlier_threshold":3.0,"enable_outlier_detection":true}'
 ```
 
-## 🏆 **Enterprise Ready**
+| Field | Default | Effect |
+|-------|---------|--------|
+| `outlier_threshold` | `3.0` | Z-score cutoff for outlier rejection |
+| `enable_outlier_detection` | `true` | Toggle filter stage |
+| `min_confidence` | `0.8` | Confidence gate for fusion path |
 
-### **Production Features**
-- ✅ **Observability** - Prometheus metrics + structured logging
-- ✅ **Reliability** - Health checks + graceful shutdown
-- ✅ **Security** - Non-root container + minimal attack surface
-- ✅ **Scalability** - Stateless design + horizontal scaling ready
-- ✅ **Testing** - Unit tests + integration tests + sanitizers
-- ✅ **CI/CD** - Automated builds + tests + deployments
+## Validation (automated)
 
-### **Performance Optimized**
-- Header-only dependencies (no external libs)
-- Atomic operations for thread safety
-- Efficient memory management
-- Optimized for Apple Silicon (ARM64)
+`ctest` and CI exercise the same gates locally and on push.
 
-## 🎓 **Learning Outcomes**
+| Gate | Result | Notes |
+|------|--------|-------|
+| Service logic (12 tests) | PASS | Fusion, outliers, config, stats |
+| Metrics system (12 tests) | PASS | Counters, histograms, gauges, timers |
+| Integration / HTTP | PASS | Endpoints, JSON contracts |
+| ASan + UBSan (CI) | PASS | Memory & UB checks on Ubuntu |
+| Docker build (CI) | PASS | Multi-stage image |
 
-This project demonstrates:
-1. **Modern C++17/20** best practices
-2. **Production HTTP server** implementation
-3. **Thread-safe metrics** system
-4. **Comprehensive testing** strategies
-5. **CI/CD pipeline** setup
-6. **Docker containerization** best practices
-7. **Performance optimization** techniques
-8. **Observability** and monitoring
+Representative load (Apple M3 Pro, `./demo.sh` / `hey -z 15s -c 100`):
 
-## 📚 **Documentation**
+| Metric | Value |
+|--------|-------|
+| Throughput | ~13k–22k req/s |
+| Latency P50 | ~0.8 ms |
+| Latency P99 | ~32 ms |
+| Error rate | 0% |
 
-- **[TESTING_ANALYSIS.md](TESTING_ANALYSIS.md)** - Detailed testing methodology and results
-- **[demo.sh](demo.sh)** - Interactive demonstration script
-- **[docker/Dockerfile](docker/Dockerfile)** - Multi-stage container build
+## Tests
 
-## 🤝 **Contributing**
+| Gate | Purpose |
+|------|---------|
+| `ctest --test-dir build --output-on-failure` | All 24 GoogleTest cases |
+| `./demo.sh` | End-to-end HTTP walkthrough + load snippet |
+| `hey` / `tools/loadgen/run_hey.sh` | Throughput & latency distribution |
+| `.github/workflows/ci.yml` | Build, test, sanitizers, coverage, Docker |
 
-1. Fork the repository
-2. Create a feature branch
-3. Run tests: `ctest --test-dir build --output-on-failure`
-4. Submit a pull request
+**CI (Layer 3):** [GitHub Actions](.github/workflows/ci.yml) runs build + test, Address/Undefined sanitizers, coverage upload, clang-tidy, and a Docker image build on every push to `main` / `develop`.
 
-## 📄 **License**
+## Documentation
 
-MIT License - see [LICENSE](LICENSE) file for details.
+| Path | Contents |
+|------|----------|
+| [TESTING_ANALYSIS.md](TESTING_ANALYSIS.md) | Methodology, fixture detail, load-test notes |
+| [demo.sh](demo.sh) | Scripted Layer 3 demo |
+| [docker/Dockerfile](docker/Dockerfile) | Multi-stage runtime image (~126 MB) |
+| [screenshots/](screenshots/) | Captured metrics/stats artifacts |
 
----
+## Roadmap
 
-**🚀 This is a complete, production-ready C++ microservice that serves as an excellent blueprint for enterprise C++ development. Perfect for demonstrating modern C++ skills, DevOps practices, and system design capabilities.**
+- [x] Layer 1 — C++17 fusion core + 24 unit tests
+- [x] Layer 2 — Threaded HTTP server (`/health`, `/fuse`, `/metrics`, `/stats`, `/config`)
+- [x] Layer 3 — GitHub Actions (build, sanitizers, coverage, Docker)
+- [x] Layer 4 — `demo.sh` + load-gen tooling + container publish path
+- [x] Prometheus-compatible `/metrics` exposition
+- [ ] gRPC ingress alongside HTTP
+- [ ] Persistent stats backend (SQLite / Redis)
+- [ ] OpenTelemetry trace export
+
+<details>
+<summary>Technical depth — layout & request path</summary>
+
+```
+src/                    main, service, metrics, http_server
+include/                Public headers + config.h.in
+tests/                  service_tests, metrics_tests, integration_tests
+third_party/            Header-only JSON, HTTP, logging
+docker/                 Multi-stage Debian slim image
+tools/loadgen/          hey/wrk helpers + latency plots
+.github/workflows/      ci.yml
+demo.sh                 Layer 3 orchestration
+```
+
+- **HTTP:** `http_server.cpp` — accept loop, per-connection workers, route table to service handlers.  
+- **Fusion:** `service.cpp` — mean/σ outlier detect → `median_filter` or `weighted_average`; stats via `std::atomic`.  
+- **Metrics:** `metrics.cpp` — Prometheus text format; thread-safe counters/histograms.  
+- **Build:** CMake + Ninja; GoogleTest fetched at configure time; `-Wall -Wextra` via `cmake/Warnings.cmake`.  
+- **Container:** non-root `cppservice` user, health check on `/health`, ARM64-friendly slim runtime.
+
+</details>
+
+MIT — see [LICENSE](LICENSE).
