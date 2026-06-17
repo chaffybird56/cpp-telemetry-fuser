@@ -10,7 +10,7 @@
 > **Layers 1–4:** C++17 service core → threaded HTTP server → GitHub Actions CI (sanitizers, coverage) → Docker image + load-test gate.
 
 <p align="center">
-  <img src="screenshots/05-prometheus-metrics.png" width="520" alt="Prometheus metrics endpoint — request counters, latency histograms, and fusion statistics">
+  <img src="screenshots/05-prometheus-metrics.png" width="820" alt="Prometheus metrics endpoint — request counters, latency histograms, and fusion statistics">
 </p>
 
 | Clean fusion | Outlier rejected |
